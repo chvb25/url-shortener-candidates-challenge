@@ -1,15 +1,30 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/s.$code";
-import { shortenedUrls } from "@url-shortener/engine";
+import { PrismaUrlRepository } from "../core/infrastructure/prisma-url.repository";
+import { GetUrlByCodeUseCase } from "../core/application/get-url-by-code.use-case";
 
-export function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params }: Route.LoaderArgs) {
   const { code } = params;
 
-  const url = shortenedUrls.get(code);
-
-  if (!url) {
-    throw new Response("Not Found", { status: 404 });
+  if (!code) {
+    throw new Response("Bad Request", { status: 400 });
   }
 
-  return redirect(url);
+  try {
+    const repository = new PrismaUrlRepository();
+    const getUrlUseCase = new GetUrlByCodeUseCase(repository);
+    
+    const url = await getUrlUseCase.execute(code);
+
+    if (!url) {
+      throw new Response("Short Link Not Found", { status: 404 });
+    }
+
+    return redirect(url.originalUrl);
+  } catch (err) {
+    if (err instanceof Response) throw err;
+    
+    console.error(err);
+    throw new Response("Internal Server Error", { status: 500 });
+  }
 }

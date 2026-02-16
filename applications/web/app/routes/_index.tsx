@@ -1,15 +1,17 @@
-import { Form, useActionData } from "react-router";
+import { Form, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/_index";
-import {
-  baseUrl,
-  shortenedUrls,
-  generateShortCode,
-} from "@url-shortener/engine";
+import { PrismaUrlRepository } from "../core/infrastructure/prisma-url.repository";
+import { ShortenUrlUseCase } from "../core/application/shorten-url.use-case";
+import { Layout } from "../components/layout";
+import { Button } from "../components/button";
+import { Input } from "../components/input";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/card";
 
-export function loader() {
-  return {
-    baseUrl: baseUrl ? baseUrl + "/s/" : "-",
-  };
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Kabilio | Smart URL Shortener" },
+    { name: "description", content: "Shorten your long links into smart, manageable URLs with ease." },
+  ];
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -17,82 +19,109 @@ export async function action({ request }: Route.ActionArgs) {
   const url = formData.get("url") as string;
 
   if (!url) {
-    return { error: "URL is required" };
+    return { error: "Please provide a valid URL." };
   }
 
-  const shortCode = generateShortCode();
+  try {
+    const repository = new PrismaUrlRepository();
+    const shortenUseCase = new ShortenUrlUseCase(repository);
+    const domainUrl = await shortenUseCase.execute(url);
 
-  shortenedUrls.set(shortCode, url);
+    const urlObj = new URL(request.url);
+    const shortenedUrl = `${urlObj.protocol}//${urlObj.host}/s/${domainUrl.code}`;
 
-  return {
-    shortenedUrl: `${baseUrl}/s/${shortCode}`,
-  };
+    return { shortenedUrl };
+  } catch (err) {
+    console.error(err);
+    return { error: "An unexpected error occurred. Please try again." };
+  }
 }
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "URL Shortener" },
-    { name: "description", content: "Shorten your URLs quickly and easily" },
-  ];
-}
-
-export default function Index({ loaderData }: Route.ComponentProps) {
-  const { baseUrl } = loaderData;
+export default function Index() {
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-lime-400 via-pink-500 to-cyan-300">
-      <div className="bg-yellow-300 p-12 rounded-none border-8 border-dashed border-purple-600 w-full max-w-lg rotate-1 shadow-2xl shadow-red-500">
-        <h1 className="text-4xl font-mono italic text-center mb-8 text-fuchsia-600 underline decoration-wavy decoration-green-500 tracking-widest">
-          ~*~ URL Shortener ~*~
-        </h1>
+    <Layout>
+      <div className="max-w-xl mx-auto mt-12 sm:mt-20">
+        <div className="text-center mb-10 space-y-4">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
+            Shorten your <span className="text-blue-600">long links</span>
+          </h1>
+          <p className="text-lg text-slate-600">
+            Kabilio helps you create clean, professional, and trackable short links in seconds.
+          </p>
+        </div>
 
-        <Form method="post" className="flex flex-col gap-6">
-          <input
-            type="text"
-            name="url"
-            placeholder="Enter your URL here..."
-            required
-            className="w-full px-4 py-3 text-base bg-orange-200 border-4 border-blue-600 text-purple-800 placeholder-red-400 rounded focus:outline-none"
-          />
+        <Card className="shadow-xl border-slate-200/60 overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardTitle>Create reaching links</CardTitle>
+            <CardDescription>Paste your long URL below to get your shortened version.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-8">
+            <Form method="post" className="space-y-6">
+              <Input
+                name="url"
+                type="url"
+                placeholder="https://example.com/very-long-url-to-shorten"
+                required
+                label="Destination URL"
+                autoComplete="off"
+                error={actionData?.error}
+              />
+              <Button 
+                type="submit" 
+                className="w-full" 
+                isLoading={isSubmitting}
+                size="lg"
+              >
+                {isSubmitting ? "Shortening..." : "Shorten URL"}
+              </Button>
+            </Form>
+          </CardContent>
+          {actionData?.shortenedUrl && !isSubmitting && (
+            <CardFooter className="bg-blue-50/50 border-t border-blue-100 flex-col items-start gap-4 p-6">
+              <div className="w-full">
+                <p className="text-sm font-semibold text-blue-900 mb-2 uppercase tracking-wider">Success! Your link is ready:</p>
+                <div className="flex items-center gap-2 w-full p-3 bg-white border border-blue-200 rounded-lg shadow-inner">
+                  <span className="flex-1 font-mono text-sm text-slate-700 truncate">
+                    {actionData.shortenedUrl}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(actionData.shortenedUrl!);
+                    }}
+                    className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600/80 italic text-center w-full">
+                Share this link anywhere to track its performance.
+              </p>
+            </CardFooter>
+          )}
+        </Card>
 
-          <div>
-            <button
-              type="submit"
-              className="w-full px-4 py-3 text-base bg-red-500 hover:bg-lime-500 text-yellow-200 border-4 border-teal-400 rounded-full skew-x-3 cursor-pointer"
-            >
-              ★ SHORTEN IT ★
-            </button>
-            <p className="text-sm text-indigo-800 mt-3 text-center font-bold bg-cyan-200 p-2 border-2 border-dotted border-orange-500">
-              Your shortened URL will start with {baseUrl}
-            </p>
-          </div>
-        </Form>
-
-        {actionData?.shortenedUrl && (
-          <div className="mt-8 p-4 bg-violet-400 rounded-3xl border-4 border-double border-yellow-500 -rotate-1">
-            <p className="text-lg text-lime-300 mb-2 font-black uppercase">
-              Your shortened URL:
-            </p>
-            <a
-              href={actionData.shortenedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-red-200 break-all font-mono text-xl hover:text-blue-900 bg-pink-600 p-2 block"
-            >
-              {actionData.shortenedUrl}
-            </a>
-          </div>
-        )}
-
-        {actionData?.error && (
-          <div className="mt-8 p-4 bg-lime-500 rounded-none border-8 border-solid border-red-700">
-            <p className="text-2xl text-blue-800 font-black">
-              {actionData.error}
-            </p>
-          </div>
-        )}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            <div className="p-4">
+                <div className="text-blue-600 font-bold text-xl mb-1">Simple</div>
+                <p className="text-sm text-slate-500">No complex setup. Just paste and go.</p>
+            </div>
+            <div className="p-4 border-slate-200 sm:border-x">
+                <div className="text-blue-600 font-bold text-xl mb-1">Secure</div>
+                <p className="text-sm text-slate-500">Safe and reliable link management.</p>
+            </div>
+            <div className="p-4">
+                <div className="text-blue-600 font-bold text-xl mb-1">Fast</div>
+                <p className="text-sm text-slate-500">Optimized for speed and minimal latency.</p>
+            </div>
+        </div>
       </div>
-    </main>
+    </Layout>
   );
 }

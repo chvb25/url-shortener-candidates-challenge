@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/s.$code";
+import { ErrorDisplay } from "../components/error-display";
 import { PrismaUrlRepository } from "../core/infrastructure/prisma-url.repository";
 import { GetUrlByCodeUseCase } from "../core/application/get-url-by-code.use-case";
 
@@ -27,4 +28,18 @@ export async function loader({ params }: Route.LoaderArgs) {
     console.error(err);
     throw new Response("Internal Server Error", { status: 500 });
   }
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="max-w-md w-full p-4">
+        <ErrorDisplay
+          title="Short Link Error"
+          message="We couldn't find the link you were looking for or something went wrong during the redirect."
+          status={404}
+        />
+      </div>
+    </div>
+  );
 }

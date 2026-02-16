@@ -40,4 +40,17 @@ describe("ShortenUrlUseCase", () => {
     expect(result.code).toHaveLength(7);
     expect(mockRepository.findByCode).toHaveBeenCalledTimes(2);
   });
+
+  it("should throw error for non-HTTP(S) protocols", async () => {
+    const useCase = new ShortenUrlUseCase(mockRepository);
+    await expect(useCase.execute("ftp://example.com")).rejects.toThrow("Only HTTP and HTTPS protocols are supported");
+    // URL constructor might fail for javascript: or it might just parse as protocol: "javascript:"
+    await expect(useCase.execute("javascript:alert(1)")).rejects.toThrow();
+  });
+
+  it("should throw error for localhost or 127.0.0.1", async () => {
+    const useCase = new ShortenUrlUseCase(mockRepository);
+    await expect(useCase.execute("http://localhost:3000")).rejects.toThrow("Shortening local URLs is not allowed");
+    await expect(useCase.execute("https://127.0.0.1/abc")).rejects.toThrow("Shortening local URLs is not allowed");
+  });
 });

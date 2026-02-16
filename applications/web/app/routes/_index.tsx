@@ -6,6 +6,8 @@ import { Layout } from "../components/layout";
 import { Button } from "../components/button";
 import { Input } from "../components/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/card";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -25,12 +27,16 @@ export async function action({ request }: Route.ActionArgs) {
   try {
     const repository = new PrismaUrlRepository();
     const shortenUseCase = new ShortenUrlUseCase(repository);
-    const domainUrl = await shortenUseCase.execute(url);
-
-    const urlObj = new URL(request.url);
-    const shortenedUrl = `${urlObj.protocol}//${urlObj.host}/s/${domainUrl.code}`;
-
-    return { shortenedUrl };
+    try {
+      const domainUrl = await shortenUseCase.execute(url);
+      return {
+        shortenedUrl: `${new URL(request.url).origin}/s/${domainUrl.code}`
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Failed to shorten URL"
+      };
+    }
   } catch (err) {
     console.error(err);
     return { error: "An unexpected error occurred. Please try again." };
@@ -41,6 +47,17 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+
+  useEffect(() => {
+    if (actionData?.shortenedUrl) {
+      toast.success("Link shortened successfully!", {
+        description: "You can now share your shortened URL.",
+      });
+    }
+    if (actionData?.error) {
+      toast.error(actionData.error);
+    }
+  }, [actionData]);
 
   return (
     <Layout>
@@ -93,6 +110,7 @@ export default function Index() {
                     size="sm"
                     onClick={() => {
                       navigator.clipboard.writeText(actionData.shortenedUrl!);
+                      toast.info("Copied to clipboard!");
                     }}
                     className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   >

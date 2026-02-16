@@ -1,37 +1,70 @@
-# URL Shortener
+# Kabilio URL Shortener
+
+A high-quality, modern URL shortener built with React Router 7, Prisma, SQLite, and Tailwind CSS, following strict **Domain-Driven Design (DDD)** principles.
+
+## Project Structure
+
+The project has been refactored from a monorepo into a single cohesive application located in `applications/web`.
+
+```text
+applications/web/
+├── app/
+│   ├── components/       # Reusable UI components (Button, Input, Card, Layout)
+│   ├── core/             # DDD Layers
+│   │   ├── domain/       # Entities (Url) and Repository Interfaces
+│   │   ├── application/  # Use Cases (Shorten, GetStats, Redirect)
+│   │   └── infrastructure/# Prisma implementation of Repositories
+│   ├── db/               # Database client (Prisma)
+│   ├── routes/           # React Router routes (Home, Stats, Redirect)
+│   └── root.tsx          # App root
+├── prisma/               # Database schema
+└── public/               # Static assets
+```
 
 ## Tech Stack
 
-```
-url-shortener/
-├── applications/web/    # React + React Router v7
-└── libs/engine/         # Domain logic
-```
-
-| Technology                                    | Description                                                                                       |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [pnpm](https://pnpm.io/)                      | Fast, disk-efficient package manager with built-in monorepo support via workspaces                |
-| [Turbo](https://turbo.build/)                 | High-performance build system for monorepos. Runs tasks in parallel and caches results            |
-| [React](https://react.dev/)                   | Library for building user interfaces with components                                              |
-| [React Router v7](https://reactrouter.com/)   | Full-stack React framework. Handles routing, data loading (loaders), mutations (actions), and SSR |
-| [TypeScript](https://www.typescriptlang.org/) | Typed superset of JavaScript for catching errors at compile time                                  |
-| [Tailwind CSS](https://tailwindcss.com/)      | Utility-first CSS framework for rapid UI development                                              |
-| [Vite](https://vite.dev/)                     | Fast build tool and dev server with hot module replacement                                        |
+| Technology | Description |
+| --- | --- |
+| **React Router 7** | Full-stack React framework for routing and data management. |
+| **Prisma** | Modern ORM for type-safe database access. |
+| **SQLite** | Local file-based database. |
+| **Tailwind CSS** | Utility-first CSS for premium UI design. |
+| **TypeScript** | Strict typing for reliability. |
 
 ## Local Setup
 
-```bash
-pnpm install
-cp .env.example .env
-pnpm dev
-```
+1. **Install Dependencies**:
+   ```bash
+   pnpm install
+   ```
+
+2. **Setup Environment**:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Database Setup**:
+   ```bash
+   cd applications/web
+   pnpm db:push
+   pnpm db:generate
+   ```
+
+4. **Run Development Server**:
+   ```bash
+   pnpm dev
+   ```
+
+5. **Running Tests**:
+   ```bash
+   cd applications/web
+   pnpm test
+   ```
 
 Open `http://localhost:5173`
 
-## Docker Setup
+## Architecture Highlights
 
-```bash
-docker-compose up --build
-```
-
-Open `http://localhost:3000`
+- **Decoupled Business Logic**: Use cases are independent of the framework and database.
+- **Persistence Ignorance**: The domain layer knows nothing about Prisma; it only talks to interfaces.
+- **Modern UI**: Components are built with Tailwind CSS for a professional, responsive look.

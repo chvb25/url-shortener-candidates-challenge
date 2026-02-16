@@ -4,27 +4,31 @@ WORKDIR /app
 
 FROM base AS dependencies
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY libs/engine/package.json ./libs/engine/
 COPY applications/web/package.json ./applications/web/
-RUN pnpm install --frozen-lockfile
+# We don't need libs/engine anymore since we refactored it into web
+RUN pnpm install
 
 FROM base AS build
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/libs/engine/node_modules ./libs/engine/node_modules
 COPY --from=dependencies /app/applications/web/node_modules ./applications/web/node_modules
 COPY . .
-RUN pnpm build
+RUN pnpm --filter web build
 
 FROM base AS production
+ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/applications/web/node_modules ./applications/web/node_modules
-COPY --from=build /app/libs/engine/node_modules ./libs/engine/node_modules
 COPY --from=build /app/applications/web/build ./applications/web/build
-COPY libs/engine/src ./libs/engine/src
-COPY applications/web/package.json ./applications/web/
-COPY libs/engine/package.json ./libs/engine/
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --from=build /app/applications/web/prisma ./applications/web/prisma
+COPY --from=build /app/applications/web/package.json ./applications/web/package.json
+COPY --from=build /app/package.json ./package.json
+
+# Copy entrypoint script
+COPY applications/web/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /app/applications/web
 EXPOSE 3000
+
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["pnpm", "start"]

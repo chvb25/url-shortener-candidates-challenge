@@ -7,4 +7,9 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - PUBLIC_URL=http://localhost:3000
+      - DATABASE_URL=file:/app/data/sqlite.db
+    volumes:
+      - sqlite_data:/app/data
+
+volumes:
+  sqlite_data:

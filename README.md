@@ -61,7 +61,16 @@ applications/web/
    pnpm test
    ```
 
-Open `http://localhost:5173`
+### Running with Docker
+
+1. **Build and Start**:
+   ```bash
+   docker-compose up --build
+   ```
+
+The application will be available at `http://localhost:3000`. The SQLite database is persisted in a named volume (`sqlite_data`).
+
+Open `http://localhost:5173` (dev) or `http://localhost:3000` (docker)
 
 ## Architecture Highlights
 
